@@ -89,18 +89,22 @@ void microMouseServer::loadMaze()
     }
 
     //read maze
-    QTextStream mazeFile(&inFile);
+    QTextStream mazeStream(&inFile);
+    QStringList mazeFile = mazeStream.readAll().split(":");
+
+    mazeStream.flush();
+    inFile.close();
 
     int largestX =0, largestY=0;
     int x, y, wallTop, wallBottom, wallLeft,wallRight;
-    while(!mazeFile.atEnd())
+    for(int i=0; i< mazeFile.length(); i++)
     {
-        mazeFile >> x;
-        mazeFile >> y;
-        mazeFile >> wallTop;
-        mazeFile >> wallBottom;
-        mazeFile >> wallLeft;
-        mazeFile >> wallRight;
+        x =((QString)mazeFile.at(i)).section(' ',0,0).toInt();
+        y =((QString)mazeFile.at(i)).section(' ',1,1).toInt();
+        wallTop =((QString)mazeFile.at(i)).section(' ',2,2).toInt();
+        wallBottom =((QString)mazeFile.at(i)).section(' ',3,3).toInt();
+        wallLeft =((QString)mazeFile.at(i)).section(' ',4,4).toInt();
+        wallRight =((QString)mazeFile.at(i)).section(' ',5,5).toInt();
 
         //check formating
         if(x<0 || y<0 || wallTop<0 || wallBottom<0 || wallLeft<0 || wallRight<0 ||
@@ -176,8 +180,7 @@ void microMouseServer::loadMaze()
         }
     }
     ui->txt_debug->append("Maze loaded");
-    mazeFile.flush();
-    inFile.close();
+
 
     //draw maze and mouse
     this->maze->drawMaze(this->mazeData);
@@ -198,28 +201,27 @@ void microMouseServer::saveMaze()
         ui->txt_debug->append("ERROR 202: file not found");
         return;
     }
-    else
+
+    QTextStream mazeFile(&inFile);
+
+    for(int i = 0; i < MAZE_WIDTH; i++)
     {
-        QTextStream mazeFile(&inFile);
-
-        for(int i = 0; i < MAZE_WIDTH; i++)
+        for(int j = 0; j < MAZE_HEIGHT; j++)
         {
-            for(int j = 0; j < MAZE_HEIGHT; j++)
-            {
-                int top = this->mazeData[i][j].isWallTop();
-                int bottom = this->mazeData[i][j].isWallBottom();
-                int left = this->mazeData[i][j].isWallLeft();
-                int right = this->mazeData[i][j].isWallRight();
+            int top = this->mazeData[i][j].isWallTop();
+            int bottom = this->mazeData[i][j].isWallBottom();
+            int left = this->mazeData[i][j].isWallLeft();
+            int right = this->mazeData[i][j].isWallRight();
 
-                mazeFile << this->mazeData[i][j].posX() << " " << this->mazeData[i][j].posY() << " " << top << " " << bottom << " " << left << " " << right << endl;
-            }
+            mazeFile << this->mazeData[i][j].posX() << " " << this->mazeData[i][j].posY() << " " << top << " " << bottom << " " << left << " " << right << ":";
         }
-
-        mazeFile.flush();
-
-        inFile.close();
-        ui->txt_debug->append("Maze Saved to File.");
     }
+
+    mazeFile.flush();
+
+    inFile.close();
+    ui->txt_debug->append("Maze Saved to File.");
+
 }
 
 void microMouseServer::initMaze()
