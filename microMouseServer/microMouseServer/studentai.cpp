@@ -27,23 +27,27 @@ void microMouseServer::studentAI()
 
     static int visited[20][20] = {{0}};
 
+    int deadEndTest = 0;
+
     if (!isWallLeft() && pos.yPos != 19 && (pos.xPos > 0 && visited[pos.xPos-1][pos.yPos] != -1) ) {
+        deadEndTest++;
         turnLeft();
         dir = fixDir(dir-1);
     }
     else if (!isWallRight() && pos.yPos != 19 && (pos.xPos < 20 && visited[pos.xPos+1][pos.yPos] != -1)) {
+        deadEndTest++;
         turnRight();
         dir = fixDir(dir+1);
     }
-    bool isDeadEnd = false;
     if (!isWallForward() && pos.yPos != 19){
+        deadEndTest++;
         moveForward();
-        fixPos(dir, &pos, visited, isDeadEnd);
+        fixPos(dir, &pos, visited, deadEndTest <= 1);
     }
     else {
         turnLeft();
         dir = fixDir(dir-1);
-        isDeadEnd = true;
+        visited[pos.xPos][pos.yPos] = -1;
     }
 
     printUI(("(" + std::to_string(pos.xPos) + ", " + std::to_string(pos.yPos) + ")").c_str());
