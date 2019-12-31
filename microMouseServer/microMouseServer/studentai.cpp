@@ -39,7 +39,13 @@ void microMouseServer::studentAI()
     }
     if (!isWallForward()) {
         moveForward();
-        fixPos(dir, &pos, visited, (backtracking && ++deadEndTest <= 1) ? -1: 1);
+        if (backtracking && ++deadEndTest <= 1) {
+            fixPos(dir, &pos, visited, -1);
+        }
+        else {
+            backtracking = false;
+            fixPos(dir, &pos, visited, 1);
+        }
     }
     else {
         turnLeft();
