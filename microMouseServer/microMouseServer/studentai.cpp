@@ -10,10 +10,13 @@ int fixDir(int curr) {
     if (curr < 0) return 4+curr;
     else return curr % 4;
 }
-void fixPos(int dir, struct vec2 *pos, int v[20][20]) {
+bool fixPos(int dir, struct vec2 *pos, int v[20][20], std::vector<vec2> *moves) {
     struct vec2 move = { (dir % 2 == 0) ? 0 : -(dir-2) , (dir % 2 == 0) ? -(dir - 1): 0};
     *pos = {pos->xPos + move.xPos, pos->yPos + move.yPos};
     v[pos->xPos][pos->yPos] += 1;
+    moves->push_back({pos->xPos, pos->yPos});
+    if (moves->size() > 5) moves->erase(moves->begin());
+    return moves->size() > 4 && (moves->at(0).xPos == pos->xPos && moves->at(0).yPos == pos->yPos) && (abs(moves->at(2).xPos - pos->xPos) == 1 && abs(moves->at(2).yPos - pos->yPos) == 1) && ((abs(moves->at(1).xPos - pos->xPos) + abs(moves->at(1).yPos - pos->yPos)) == 1) && ((abs(moves->at(3).xPos - pos->xPos) + abs(moves->at(3).yPos - pos->yPos)) == 1);
 }
 
 void microMouseServer::studentAI()
@@ -22,39 +25,29 @@ void microMouseServer::studentAI()
     static struct vec2 pos = {0, 0};
     static int visited[20][20] = {};
     static bool backtracking = false;
+    static std::vector<vec2> steps = {};
 
-    //left
-    struct vec2 left = {0, 0};
-    if (dir % 2 == 0) left = {dir - 1, 0};
-    else left = {0, 2 - dir};
-
-    //right
-    struct vec2 right = {-left.xPos, -left.yPos};
-
-    //fwd
-    struct vec2 fwd = {0, 0};
-    if (dir % 2 == 0) fwd = {right.yPos, right.xPos};
-    else fwd = {left.yPos, left.xPos};
-
-    //values
-    int leftVal = visited[pos.xPos+left.xPos][pos.yPos+left.yPos];
-    int rightVal = visited[pos.xPos+right.xPos][pos.yPos+right.yPos];
-    int fwdVal = visited[pos.xPos+fwd.xPos][pos.yPos+fwd.yPos];
-    bool wallLeft = isWallLeft() || leftVal == INT_MAX;
-    bool wallRight = isWallRight() || rightVal == INT_MAX;
-    bool wallForward = isWallForward() || fwdVal == INT_MAX;
+    struct vec2 left = {(dir % 2 == 0) ? (dir - 1) : 0, (dir % 2 == 0) ? 0 : (2 - dir)}; // left factor
+    struct vec2 right = {-left.xPos, -left.yPos}; // right factor
+    struct vec2 fwd = {(dir % 2 == 0) ? right.yPos : left.yPos, (dir % 2 == 0) ? right.xPos : left.xPos}; // forward factor
+    int leftVal = visited[pos.xPos+left.xPos][pos.yPos+left.yPos]; // value of matrix at left
+    int rightVal = visited[pos.xPos+right.xPos][pos.yPos+right.yPos]; // value of matrix at right
+    int fwdVal = visited[pos.xPos+fwd.xPos][pos.yPos+fwd.yPos]; // value of matrix forward
+    bool wallLeft = isWallLeft() || leftVal == INT_MAX; // is there a wall or a dead end to the left?
+    bool wallRight = isWallRight() || rightVal == INT_MAX; // is there a wall or a dead end to the right?
+    bool wallForward = isWallForward() || fwdVal == INT_MAX; // is there a wall or a dead end forward?
 
     int numWalls = int(wallLeft) + int(wallRight) + int(wallForward);
-    short priority = 0;
-    // No choice - deadend
+
+    // No choice (dead end)
     if (numWalls == 3) {
         backtracking = true;
         turnRight();
         turnRight();
         visited[pos.xPos][pos.yPos] = INT_MAX;
         dir = fixDir(dir+2);
-        moveForward();
-        fixPos(dir, &pos, visited);
+        steps.push_back({pos.xPos, pos.yPos});
+        if (steps.size() > 5) steps.erase(steps.begin());
     }
     // Only one choice
     else if (numWalls == 2) {
@@ -67,19 +60,17 @@ void microMouseServer::studentAI()
         }
         if (backtracking)
             visited[pos.xPos][pos.yPos] = INT_MAX;
-        moveForward();
-        fixPos(dir, &pos, visited);
     }
     // More than one choice
     else if (numWalls < 2 ) {
         backtracking = false;
-        if (isWallLeft()) {
+        short priority = 0;
+        if (wallLeft)
             priority = rightVal <= fwdVal ? 1 : 2;
-        } else if (wallRight) {
+        else if (wallRight)
             priority = leftVal <= fwdVal ? 0 : 2;
-        } else if (wallForward) {
+        else if (wallForward)
             priority = leftVal <= rightVal ? 0 : 1;
-        }
         if (priority == 0) {
             turnLeft();
             dir = fixDir(dir-1);
@@ -87,8 +78,8 @@ void microMouseServer::studentAI()
             turnRight();
             dir = fixDir(dir+1);
         }
-        moveForward();
-        fixPos(dir, &pos, visited);
     }
-    printUI(("(" + std::to_string(pos.xPos) + ", " + std::to_string(pos.yPos) + ") curr: " + std::to_string(visited[pos.xPos][pos.yPos]) + " r: " + std::to_string(rightVal) + " l: " + std::to_string(leftVal) + " f: " + std::to_string(fwdVal)).c_str());
+    moveForward();
+    if (fixPos(dir, &pos, visited, &steps))
+        foundFinish();
 }
