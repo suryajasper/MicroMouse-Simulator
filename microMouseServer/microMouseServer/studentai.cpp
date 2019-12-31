@@ -27,6 +27,8 @@ void microMouseServer::studentAI()
 
     static int visited[20][20] = {{0}};
 
+    static bool backtracking = false;
+
     int deadEndTest = 0;
 
     if (!isWallLeft() && pos.yPos != 19 && (pos.xPos > 0 && visited[pos.xPos-1][pos.yPos] != -1) ) {
@@ -48,6 +50,7 @@ void microMouseServer::studentAI()
         turnLeft();
         dir = fixDir(dir-1);
         visited[pos.xPos][pos.yPos] = -1;
+        backtracking = true;
     }
 
     printUI(("(" + std::to_string(pos.xPos) + ", " + std::to_string(pos.yPos) + ")").c_str());
